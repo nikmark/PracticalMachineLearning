@@ -150,7 +150,7 @@ trainLess1 <- trainLess[-c(1:8)]
 testLess1 <- testLess[-c(1:8)]
 ````
 
-Removing the higly correlated (0.85) variables
+#### Removing the highly correlated (0.85) variables
 ````
 M <- abs(cor(trainLess1[sapply(trainLess1, is.numeric)]))
 diag(M) <-0
@@ -158,4 +158,15 @@ corVar <- which(M > 0.85, arr.ind=T)
 
 trainLess2 <- trainLess1[-c(corVar)]
 testLess2 <- testLess1[-c(corVar)]
+````
+#### Create cross validation set
+````
+inTrain = createDataPartition(trainLess2$classe, p = 3/4, list=FALSE)
+training = trainLess2[inTrain,]
+testing = trainLess2[-inTrain,]
+````
+
+#### Train model with random forest due to its highly accuracy rate
+````
+modFit <- train(classe ~., method="parRF", data=trainLess2, trControl=trainControl(method="OOB"), number=3)
 ````
