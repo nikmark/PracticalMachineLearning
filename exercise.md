@@ -20,7 +20,8 @@ The goal of this project is to predict the manner of performing unilateral dumbb
 * E: throwing the hips to the front
 
 #### Load libraries and setup working directory
-````{r, eval=FALSE}
+
+```r
 rm(list = ls(all = TRUE))
 
 setwd('/media/nicolo/Data/Coursera/PracticalMachineLearning/Data/PracticalMachineLearning')
@@ -31,7 +32,7 @@ trainingRaw <- read.csv(file="pml-training.csv", header=TRUE, as.is = TRUE, stri
 testingRaw <- read.csv(file="pml-testing.csv", header=TRUE, as.is = TRUE, stringsAsFactors = FALSE, sep=',', na.strings=c('NA','','#DIV/0!'))
 
 trainingRaw$classe <- as.factor(trainingRaw$classe)  
-````
+```
 
 #### Examine the data
 
@@ -142,15 +143,16 @@ trainingRaw$classe <- as.factor(trainingRaw$classe)
 #### Cleaning variables
 After investigating all the variables of the sets, it's possible to see that there are a lot of values NA or useless or empty variables for the prediction. It's request to compute the prediction only on the accelerometers values of belt, forearm, arm and dumbell. So, the non-accelerometer measures are discard with the useless variables.
 
-````{r, eval=FALSE}
+
+```r
 NAindex <- apply(trainingRaw,2,function(x) {sum(is.na(x))}) 
 trainingRaw <- trainingRaw[,which(NAindex == 0)]
 NAindex <- apply(testingRaw,2,function(x) {sum(is.na(x))}) 
 testingRaw <- testingRaw[,which(NAindex == 0)]
-````
+```
 #### Preprocessing variables
-````{r, eval=FALSE}
 
+```r
 v <- which(lapply(trainingRaw, class) %in% "numeric")
 
 preObj <-preProcess(trainingRaw[,v],method=c('knnImpute', 'center', 'scale'))
@@ -158,34 +160,36 @@ trainLess1 <- predict(preObj, trainingRaw[,v])
 trainLess1$classe <- trainingRaw$classe
 
 testLess1 <-predict(preObj,testingRaw[,v])
-````
+```
 #### Removing the non zero variables
 Removing the variables with values near zero, that means that they have not so much meaning in the predictions
-````{r, eval=FALSE}
+
+```r
 nzv <- nearZeroVar(trainLess1,saveMetrics=TRUE)
 trainLess1 <- trainLess1[,nzv$nzv==FALSE]
 
 nzv <- nearZeroVar(testLess1,saveMetrics=TRUE)
 testLess1 <- testLess1[,nzv$nzv==FALSE]
-````
+```
 
 #### Create cross validation set
 The training set is divided in two parts, one for training and the other for cross validation
 
-````{r, eval=FALSE}
+
+```r
 set.seed(12031987)
 
 inTrain = createDataPartition(trainLess1$classe, p = 3/4, list=FALSE)
 training = trainLess1[inTrain,]
 crossValidation = trainLess1[-inTrain,]
-````
+```
 
 #### Train model
 Train model with random forest due to its highly accuracy rate. The model is build on a training set of 28 variables from the initial 160. Cross validation is used as train control method.
-````{r, eval=FALSE}
-modFit <- train(classe ~., method="rf", data=train, trControl=trainControl(method='cv'), number=5, allowParallel=TRUE )
 
-````
+```r
+modFit <- train(classe ~., method="rf", data=train, trControl=trainControl(method='cv'), number=5, allowParallel=TRUE )
+```
 ````
 ## Time difference of 13.05325 mins
 
@@ -215,10 +219,11 @@ modFit <- train(classe ~., method="rf", data=train, trControl=trainControl(metho
 Following the computation on the accuracy of trainig and cross validation set
 
 Training set:
-````{r, eval=FALSE}
+
+```r
 trainingPred <- predict(modFit, training)
 confusionMatrix(trainingPred, training$classe)
-````
+```
 ````
 Confusion Matrix and Statistics
 
@@ -254,10 +259,11 @@ Balanced Accuracy      1.0000   1.0000   1.0000   1.0000   1.0000
 ````
 
 Cross validation set
-````{r, eval=FALSE}
+
+```r
 cvPred <- predict(modFit, crossValidation)
 confusionMatrix(cvPred, crossValidation$classe)
-````
+```
 ````
 Confusion Matrix and Statistics
 
@@ -294,10 +300,11 @@ Balanced Accuracy      0.9985   0.9969   0.9976   0.9976   0.9982
 
 #### RESULTS
 Predictions on the real testing set
-````{r, eval=FALSE}
+
+```r
 testingPred <- predict(modFit, testLess1)
 testingPred
-````
+```
 ````
  [1] B A B A A E D B A A B C B A E E A B B B
 ````
