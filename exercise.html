@@ -9,7 +9,7 @@
 <meta http-equiv="Content-Style-Type" content="text/css" />
 <meta name="generator" content="pandoc" />
 
-<meta name="author" content="NicolÃ² Marchi" />
+<meta name="author" content="Nicolò Marchi" />
 
 
 <title>Practical Machine Learning Course Project</title>
@@ -73,8 +73,10 @@ setwd('/media/nicolo/Data/Coursera/PracticalMachineLearning/Data/PracticalMachin
 
 library(caret)
 
-trainingRaw &lt;- read.csv(file=&quot;pml-training.csv&quot;,head=TRUE, na.strings=c(&quot;NA&quot;,&quot;&quot;))  
-testingRaw &lt;- read.csv(file=&quot;pml-testing.csv&quot;,head=TRUE, na.strings=c(&quot;NA&quot;,&quot;&quot;))  </code></pre>
+trainingRaw &lt;- read.csv(file=&quot;pml-training.csv&quot;, header=TRUE, as.is = TRUE, stringsAsFactors = FALSE, sep=',', na.strings=c('NA','','#DIV/0!'))
+testingRaw &lt;- read.csv(file=&quot;pml-testing.csv&quot;, header=TRUE, as.is = TRUE, stringsAsFactors = FALSE, sep=',', na.strings=c('NA','','#DIV/0!'))
+
+trainingRaw$classe &lt;- as.factor(trainingRaw$classe)  </code></pre>
 </div>
 <div id="examine-the-data" class="section level4">
 <h4>Examine the data</h4>
@@ -183,48 +185,29 @@ testingRaw &lt;- read.csv(file=&quot;pml-testing.csv&quot;,head=TRUE, na.strings
 <div id="cleaning-variables" class="section level4">
 <h4>Cleaning variables</h4>
 <p>After investigating all the variables of the sets, itâ€™s possible to see that there are a lot of values NA or useless or empty variables for the prediction. Itâ€™s request to compute the prediction only on the accelerometers values of belt, forearm, arm and dumbell. So, the non-accelerometer measures are discard with the useless variables.</p>
-<pre><code>discard &lt;- apply(trainingRaw,2,function(x) {sum(is.na(x))})
-trainLess &lt;- trainingRaw[,which(discard == 0)] 
-discard &lt;- apply(testingRaw,2,function(x) {sum(is.na(x))})
-testLess &lt;- testingRaw[,which(discard == 0)] 
+<pre><code>NAindex &lt;- apply(trainingRaw,2,function(x) {sum(is.na(x))}) 
+trainingRaw &lt;- trainingRaw[,which(NAindex == 0)]
+NAindex &lt;- apply(testingRaw,2,function(x) {sum(is.na(x))}) 
+testingRaw &lt;- testingRaw[,which(NAindex == 0)]</code></pre>
+</div>
+<div id="preprocessing-variables" class="section level4">
+<h4>Preprocessing variables</h4>
+<pre><code>v &lt;- which(lapply(trainingRaw, class) %in% &quot;numeric&quot;)
 
-trainLess1 &lt;- trainLess[-c(2:7)]
-testLess1 &lt;- testLess[-c(2:7)]
+preObj &lt;-preProcess(trainingRaw[,v],method=c('knnImpute', 'center', 'scale'))
+trainLess1 &lt;- predict(preObj, trainingRaw[,v])
+trainLess1$classe &lt;- trainingRaw$classe
 
-for(i in 1:length(trainLess1)){
-  
-  trainLess1[,i]&lt;-as.numeric(trainLess1[,i])
-  testLess1[,i]&lt;-as.numeric(testLess1[,i])
-}</code></pre>
+testLess1 &lt;-predict(preObj,testingRaw[,v])</code></pre>
 </div>
 <div id="removing-the-non-zero-variables" class="section level4">
 <h4>Removing the non zero variables</h4>
 <p>Removing the variables with values near zero, that means that they have not so much meaning in the predictions</p>
 <pre><code>nzv &lt;- nearZeroVar(trainLess1,saveMetrics=TRUE)
 trainLess1 &lt;- trainLess1[,nzv$nzv==FALSE]
-testLess1 &lt;- testLess1[,nzv$nzv==FALSE]
-testingRaw &lt;- testingRaw[,nzv$nzv==FALSE]</code></pre>
-</div>
-<div id="preprocess" class="section level4">
-<h4>Preprocess</h4>
-<p>Scaling is very important since these variables have different scales</p>
-<pre><code>preObj &lt;-preProcess(trainLess1[,-length(trainLess1)],method=c('knnImpute', 'center', 'scale'))
 
-trainLess2&lt;-predict(preObj,trainLess1[,-length(trainLess1)])
-testLess2&lt;-predict(preObj,testLess1[,-length(testLess1)])</code></pre>
-</div>
-<div id="removing-the-highly-correlated-0.85-variables" class="section level4">
-<h4>Removing the highly correlated (0.85) variables</h4>
-<p>This is usefuul for removing variable with an high correlation with others inside the training set</p>
-<pre><code>M &lt;- abs(cor(trainLess2))
-diag(M) &lt;-0
-corVar &lt;- which(M &gt; 0.85, arr.ind=T)
-
-trainLess2 &lt;- trainLess2[,-corVar]
-testLess2 &lt;- testLess2[,-corVar]
-
-
-trainLess2$classe &lt;- trainLess$classe</code></pre>
+nzv &lt;- nearZeroVar(testLess1,saveMetrics=TRUE)
+testLess1 &lt;- testLess1[,nzv$nzv==FALSE]</code></pre>
 </div>
 <div id="create-cross-validation-set" class="section level4">
 <h4>Create cross validation set</h4>
@@ -237,7 +220,9 @@ crossValidation = trainLess2[-inTrain,]</code></pre>
 </div>
 <div id="train-model-with-random-forest-due-to-its-highly-accuracy-rate" class="section level4">
 <h4>Train model with random forest due to its highly accuracy rate</h4>
-<pre><code>modFit &lt;- train(training$classe ~., method=&quot;rf&quot;, data=training, trControl=trainControl(method=&quot;OOB&quot;), number=3)</code></pre>
+<pre><code>
+modFit &lt;- train(classe ~., method=&quot;rf&quot;, data=train, trControl=trainControl(method='cv'), number=5, allowParallel=TRUE )
+</code></pre>
 <pre><code>## Random Forest 
 
 ## 14718 samples
