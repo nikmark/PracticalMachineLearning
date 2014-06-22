@@ -3,7 +3,7 @@ rm(list = ls(all = TRUE))
 
 #Setting the working directory
 #setwd('/media/nicolo/Data/Coursera/PracticalMachineLearning/Data/PracticalMachineLearning')
-setwd("D:\\Coursera\\PracticalMachineLearning\\Data\\PracticalMachineLearning")
+setwd("D:\\Coursera\\PracticalMachineLearning\\Data\\PracticalMachineLearning\\data")
 
 # Loading the caret library
 library(caret)
